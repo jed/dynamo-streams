@@ -59,4 +59,4 @@ TODO
 Credits
 -------
 
-Many thanks to @mhart for his awesome [dynalite](/mhart/dynalite) library.
+Many thanks to [mhart](//github.com/mhart) for his awesome [dynalite](//github.com/mhart/dynalite) library.
