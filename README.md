@@ -31,7 +31,7 @@ API
 
 ### db = dynamoStreams(new aws.DynamoDB)
 
-Extends the existing DynamoDB instance with the following stream methods. Note that since all of these methods encode/decode DynamoDB string types automatically, all input and output is done with normal JavaScript objects. If you'd rather not extend the DynamoDB instance, all methods are available on the `dynamoStreams` module itself, but with the database as the first argument.
+Extends the existing DynamoDB instance with the following stream methods. Note that since all of these methods encode/decode DynamoDB string types automatically, all input and output is done with normal JavaScript objects. If you'd rather not extend the DynamoDB instance, all methods are available on the `dynamoStreams` module itself, but with the DynamoDB instance as the first argument.
 
 ### db#createScanStream(params)
 
