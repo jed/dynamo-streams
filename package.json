@@ -1,0 +1,19 @@
+{
+  "name": "dynamo-streams",
+  "version": "1.0.0",
+  "description": "A DynamoDB stream interface for the JavaScript aws-sdk library",
+  "main": "index.js",
+  "author": "Jed Schmidt <where@jed.is>",
+  "license": "MIT",
+  "devDependencies": {
+    "aws-sdk": "^2.1.4",
+    "concat-stream": "^1.4.7",
+    "dynalite": "^0.5.0"
+  },
+  "dependencies": {
+    "through2": "^0.6.3"
+  },
+  "scripts": {
+    "test": "node test.js"
+  }
+}
