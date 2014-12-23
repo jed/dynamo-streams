@@ -13,12 +13,12 @@ var dynamoStreams = require("dynamo-streams")
 
 var db = dynamoStreams(new aws.DynamoDB)
 
+// A silly example that bumps the timestamp on all rows
 var read = db.createScanStream({TableName: "myTable"})
 var write = db.createPutStream({TableName: "myTable"})
 var update = through.obj(function(row, enc, cb) {
   row.updatedAt = new Date().toISOString()
-  this.push(row)
-  cb()
+  cb(null, row)
 })
 
 read.pipe(update).pipe(write).on("end", function() {
@@ -31,7 +31,7 @@ API
 
 ### db = dynamoStreams(new aws.DynamoDB)
 
-Extends the existing DynamoDB instance with the following stream methods. Note that since all of these methods encode/decode DynamoDB string types automatically, all input and output is done with normal JavaScript objects.
+Extends the existing DynamoDB instance with the following stream methods. Note that since all of these methods encode/decode DynamoDB string types automatically, all input and output is done with normal JavaScript objects. If you'd rather not extend the DynamoDB instance, all methods are available on the `dynamoStreams` module itself, but with the database as the first argument.
 
 ### db#createScanStream(params)
 
