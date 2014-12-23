@@ -55,3 +55,8 @@ TODO
 - Support for string, number, and binary sets
 - Support for table names
 - Support for batch get operations
+
+Credits
+-------
+
+Many thanks to @mhart for his awesome [dynalite](/mhart/dynalite) library.
