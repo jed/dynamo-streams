@@ -1,6 +1,6 @@
 {
   "name": "dynamo-streams",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A DynamoDB stream interface for the JavaScript aws-sdk library",
   "main": "index.js",
   "author": "Jed Schmidt <where@jed.is>",
