@@ -24,7 +24,9 @@ server.listen(function(err) {
 
   var db = new aws.DynamoDB({
     endpoint: endpoint,
-    region: "us-east-1"
+    region: "us-east-1",
+    accessKeyId: "....................",
+    secretAccessKey: "........................................"
   })
 
   db = dynamoStreams(db)
