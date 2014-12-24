@@ -152,6 +152,9 @@ function exports(db) {
   db.createDeleteStream = DeleteStream.bind(null, db)
   db.createPutStream = PutStream.bind(null, db)
 
+  db.createWriteStream = WriteStream.bind(null, db)
+  db.createReadStream = ReadStream.bind(null, db)
+
   return db
 }
 
@@ -159,5 +162,7 @@ exports.createScanStream = ScanStream
 exports.createQueryStream = QueryStream
 exports.createDeleteStream = DeleteStream
 exports.createPutStream = PutStream
+exports.createWriteStream = WriteStream
+exports.createReadStream = ReadStream
 
 module.exports = exports
