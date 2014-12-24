@@ -1,6 +1,8 @@
 dynamo-streams
 ==============
 
+[![Build Status](https://travis-ci.org/jed/dynamo-streams.svg)](https://travis-ci.org/jed/dynamo-streams)
+
 A DynamoDB stream interface for the JavaScript aws-sdk library.
 
 Example
