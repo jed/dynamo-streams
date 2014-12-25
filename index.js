@@ -118,6 +118,8 @@ function WriteStream(db, operation, params) {
   }
 
   function flush(cb) {
+    if (ops.length == 0) return cb()
+
     var items = ops.splice(0, 25).map(function(item) {
       item = serialize(item).M
 
