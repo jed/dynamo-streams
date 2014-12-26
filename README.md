@@ -6,14 +6,15 @@ dynamo-streams
 A DynamoDB stream interface for the JavaScript aws-sdk library.
 
 - Readable streams
-  - [createScanStream](#createScanStream)
-  - [createQueryStream](#createQueryStream)
+  - [createScanStream](#dbstreamscreatescanstreamparams)
+  - [createQueryStream](#dbstreamscreatequerystreamparams)
   - createTableStream (TODO)
 
 - Writable streams
-  - [createPutStream](#createPutStream)
-  - [createDeleteStream](#createDeleteStream)
-  - [createSyncStream](#createSyncStream)
+  - [createPutStream](#dbstreamscreateputstreamparams)
+  - [createDeleteStream](#dbstreamscreatedeletestreamparams)
+  - [createScanSyncStream](#dbstreamscreatescansyncstreamparams)
+  - [createQuerySyncStream](#dbstreamscreatequerysyncstreamparams)
 
 - Tranforms
   - createGetStream (TODO)
