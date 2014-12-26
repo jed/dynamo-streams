@@ -47,7 +47,7 @@ var read = dbStreams.createScanStream({TableName: "stooges"})
 Returns a readable stream of scanned rows. `params` is passed through to the underlying `db.scan` operation, with one extension: if `ScanIndexForward` property is specified, the resulting stream is sorted according the the table schema. Keep in mind that sort requires the entire stream to be buffered.
 
 ```javascript
-var read = db.createScanStream({TableName: "stooges"})
+var read = dbStreams.createScanStream({TableName: "stooges"})
 
 read.on("data", console.log)
 
@@ -67,13 +67,13 @@ Same as `createScanStream`, but for queries.
 Returns a writeable stream of rows to put. `params` must include a `TableName` property specifying the DynamoDB table. Internally, operations are chunked using `db.BatchWriteItem`.
 
 ```javascript
-var put = db.createPutStream({TableName: "stooges"})
+var put = dbStreams.createPutStream({TableName: "stooges"})
 
 put.write({id: 4, name: "Curly"})
 put.end()
 
 put.on("end", function() {
-  var read = db.createScanStream({TableName: "stooges"})
+  var read = dbStreams.createScanStream({TableName: "stooges"})
 
   read.on("data", console.log)
 
@@ -89,13 +89,13 @@ put.on("end", function() {
 Returns a writeable stream of rows to delete. `params` must include a `TableName` property specifying the DynamoDB table. Internally, operations are chunked using `db.BatchWriteItem`. All incoming objects are trimmed to keys of hash/range values.
 
 ```javascript
-var put = db.createDeleteStream({TableName: "stooges"})
+var put = dbStreams.createDeleteStream({TableName: "stooges"})
 
 put.write({id: 2})
 put.end()
 
 put.on("end", function() {
-  var read = db.createScanStream({TableName: "stooges"})
+  var read = dbStreams.createScanStream({TableName: "stooges"})
 
   read.on("data", console.log)
 
@@ -109,7 +109,7 @@ put.on("end", function() {
 Returns a writeable stream representing the state of the database for a given scan. Internally, `params` is passed to `createScanStream`, to return a readable stream. This (remote) readable stream is diffed against the items piped to the (local) stream, and the `db.BatchWriteItem` method is then used to delete items missing from the local stream and put items missing from the remote stream. In other words, the inbound items are compared with the existing items, and the minimum number of operations are then performed to update the database.
 
 ```javascript
-var put = db.createDeleteStream({TableName: "stooges"})
+var put = dbStreams.createDeleteStream({TableName: "stooges"})
 
 sync.write({id: 1, name: "Moe"})
 sync.write({id: 3, name: "Larry"})
@@ -118,7 +118,7 @@ sync.write({id: 4, name: "Curly"})
 sync.end()
 
 put.on("end", function() {
-  var read = db.createScanStream({TableName: "stooges"})
+  var read = dbStreams.createScanStream({TableName: "stooges"})
 
   read.on("data", console.log)
 
