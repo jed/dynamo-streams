@@ -19,37 +19,26 @@ A DynamoDB stream interface for the JavaScript aws-sdk library.
 - Tranforms
   - createGetStream (TODO)
 
-Example
--------
-
-```javascript
-var aws = require("aws-sdk")
-var through = require("through2")
-var dynamoStreams = require("dynamo-streams")
-
-var db = dynamoStreams(new aws.DynamoDB)
-
-// A silly example that bumps the timestamp on all rows
-var read = db.createScanStream({TableName: "myTable"})
-var write = db.createPutStream({TableName: "myTable"})
-var update = through.obj(function(row, enc, cb) {
-  row.updatedAt = new Date().toISOString()
-  cb(null, row)
-})
-
-read.pipe(update).pipe(write).on("end", function() {
-  console.log("myTable updated!")
-})
-```
-
 API
 ---
-
-#### dynamoStreams = require("dynamo-streams")
 
 #### dbStreams = dynamoStreams(new aws.DynamoDB)
 
 Extends the existing DynamoDB instance with the following stream methods. All methods encode/decode DynamoDB types (such as `S`, `N`, and `B`) automatically.
+
+```javascript
+var aws = require("aws-sdk")
+var dynamoStreams = require("dynamo-streams")
+
+var db = new aws.DynamoDB
+
+// create each stream as a function...
+var read = dynamoStreams.createScanStream(db, {TableName: "stooges"})
+
+// ... or as a method.
+var dbStreams = dynamoStreams(db)
+var read = dbStreams.createScanStream({TableName: "stooges"})
+```
 
 ### Readable streams
 
@@ -57,9 +46,19 @@ Extends the existing DynamoDB instance with the following stream methods. All me
 
 Returns a readable stream of scanned rows. `params` is passed through to the underlying `db.scan` operation, with one extension: if `ScanIndexForward` property is specified, the resulting stream is sorted according the the table schema. Keep in mind that sort requires the entire stream to be buffered.
 
+```javascript
+var read = db.createScanStream({TableName: "stooges"})
+
+read.on("data", console.log)
+
+// {id: 1, name: "Moe"}
+// {id: 2, name: "Shemp"}
+// {id: 3, name: "Larry"}
+```
+
 #### dbStreams#createQueryStream(params)
 
-Returns a readable stream of queried rows. `params` is passed through to the underlying `db.query` operation.
+Same as `createScanStream`, but for queries.
 
 ### Writable streams
 
@@ -67,13 +66,67 @@ Returns a readable stream of queried rows. `params` is passed through to the und
 
 Returns a writeable stream of rows to put. `params` must include a `TableName` property specifying the DynamoDB table. Internally, operations are chunked using `db.BatchWriteItem`.
 
+```javascript
+var put = db.createPutStream({TableName: "stooges"})
+
+put.write({id: 4, name: "Curly"})
+put.end()
+
+put.on("end", function() {
+  var read = db.createScanStream({TableName: "stooges"})
+
+  read.on("data", console.log)
+
+  // {id: 1, name: "Moe"}
+  // {id: 2, name: "Shemp"}
+  // {id: 3, name: "Larry"}
+  // {id: 4, name: "Curly"}
+}
+```
+
 #### dbStreams#createDeleteStream(params)
 
 Returns a writeable stream of rows to delete. `params` must include a `TableName` property specifying the DynamoDB table. Internally, operations are chunked using `db.BatchWriteItem`. All incoming objects are trimmed to keys of hash/range values.
 
+```javascript
+var put = db.createDeleteStream({TableName: "stooges"})
+
+put.write({id: 2})
+put.end()
+
+put.on("end", function() {
+  var read = db.createScanStream({TableName: "stooges"})
+
+  read.on("data", console.log)
+
+  // {id: 1, name: "Moe"}
+  // {id: 3, name: "Larry"}
+}
+```
+
 #### dbStreams#createScanSyncStream(params)
 
 Returns a writeable stream representing the state of the database for a given scan. Internally, `params` is passed to `createScanStream`, to return a readable stream. This (remote) readable stream is diffed against the items piped to the (local) stream, and the `db.BatchWriteItem` method is then used to delete items missing from the local stream and put items missing from the remote stream. In other words, the inbound items are compared with the existing items, and the minimum number of operations are then performed to update the database.
+
+```javascript
+var put = db.createDeleteStream({TableName: "stooges"})
+
+sync.write({id: 1, name: "Moe"})
+sync.write({id: 3, name: "Larry"})
+sync.write({id: 4, name: "Curly"})
+
+sync.end()
+
+put.on("end", function() {
+  var read = db.createScanStream({TableName: "stooges"})
+
+  read.on("data", console.log)
+
+  // {id: 1, name: "Moe"}
+  // {id: 3, name: "Larry"}
+  // {id: 4, name: "Curly"}
+}
+```
 
 #### dbStreams#createQuerySyncStream(params)
 
