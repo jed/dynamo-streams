@@ -5,6 +5,19 @@ dynamo-streams
 
 A DynamoDB stream interface for the JavaScript aws-sdk library.
 
+- Readable streams
+  - [createScanStream](#createScanStream)
+  - [createQueryStream](#createQueryStream)
+  - createTableStream (TODO)
+
+- Writable streams
+  - [createPutStream](#createPutStream)
+  - [createDeleteStream](#createDeleteStream)
+  - [createSyncStream](#createSyncStream)
+
+- Tranforms
+  - createGetStream (TODO)
+
 Example
 -------
 
@@ -31,32 +44,39 @@ read.pipe(update).pipe(write).on("end", function() {
 API
 ---
 
-### db = dynamoStreams(new aws.DynamoDB)
+#### dynamoStreams = require("dynamo-streams")
 
-Extends the existing DynamoDB instance with the following stream methods. Note that since all of these methods encode/decode DynamoDB string types automatically, all input and output is done with normal JavaScript objects. If you'd rather not extend the DynamoDB instance, all methods are available on the `dynamoStreams` module itself, but with the DynamoDB instance as the first argument.
+#### dbStreams = dynamoStreams(new aws.DynamoDB)
 
-### db#createScanStream(params)
+Extends the existing DynamoDB instance with the following stream methods. All methods encode/decode DynamoDB types (such as `S`, `N`, and `B`) automatically.
 
-Returns a readable stream of scanned rows. `params` is passed through to the underlying `db.scan` operation.
+### Readable streams
 
-### db#createQueryStream(params)
+#### dbStreams#createScanStream(params)
+
+Returns a readable stream of scanned rows. `params` is passed through to the underlying `db.scan` operation, with one extension: if `ScanIndexForward` property is specified, the resulting stream is sorted according the the table schema. Keep in mind that sort requires the entire stream to be buffered.
+
+#### dbStreams#createQueryStream(params)
 
 Returns a readable stream of queried rows. `params` is passed through to the underlying `db.query` operation.
 
-### db#createPutStream(params)
+### Writable streams
 
-Returns a writeable stream of rows to put. `params` must include a `TableName` property specifying the DynamoDB table.
+#### dbStreams#createPutStream(params)
 
-### db#createDeleteStream(params)
+Returns a writeable stream of rows to put. `params` must include a `TableName` property specifying the DynamoDB table. Internally, operations are chunked using `db.BatchWriteItem`.
 
-Returns a writeable stream of rows to delete. `params` must include a `TableName` property specifying the DynamoDB table.
+#### dbStreams#createDeleteStream(params)
 
-TODO
-----
+Returns a writeable stream of rows to delete. `params` must include a `TableName` property specifying the DynamoDB table. Internally, operations are chunked using `db.BatchWriteItem`. All incoming objects are trimmed to keys of hash/range values.
 
-- Support for string, number, and binary sets
-- Support for table names
-- Support for batch get operations
+#### dbStreams#createScanSyncStream(params)
+
+Returns a writeable stream representing the state of the database for a given scan. Internally, `params` is passed to `createScanStream`, to return a readable stream. This (remote) readable stream is diffed against the items piped to the (local) stream, and the `db.BatchWriteItem` method is then used to delete items missing from the local stream and put items missing from the remote stream. In other words, the inbound items are compared with the existing items, and the minimum number of operations are then performed to update the database.
+
+#### dbStreams#createQuerySyncStream(params)
+
+Returns the same as the `createScanSyncStream`, but for a query instead of a scan.
 
 Credits
 -------

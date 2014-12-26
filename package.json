@@ -5,18 +5,22 @@
   "main": "index.js",
   "author": "Jed Schmidt <where@jed.is>",
   "license": "MIT",
-  "devDependencies": {
-    "aws-sdk": "^2.1.4",
-    "concat-stream": "^1.4.7",
-    "dynalite": "^0.5.0"
-  },
   "keywords": [
     "dynamo",
     "dynamodb",
-    "streams"
+    "stream",
+    "sync"
   ],
   "dependencies": {
+    "diff-stream2": "^1.0.2",
+    "sort-stream2": "^1.0.0",
     "through2": "^0.6.3"
+  },
+  "devDependencies": {
+    "async": "^0.9.0",
+    "aws-sdk": "^2.1.4",
+    "concat-stream": "^1.4.7",
+    "dynalite": "^0.5.0"
   },
   "scripts": {
     "test": "node test.js"

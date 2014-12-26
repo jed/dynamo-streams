@@ -1,4 +1,6 @@
 var through = require("through2")
+var Sort = require("sort-stream2")
+var Diff = require("diff-stream2")
 
 function shallowCopy(obj) {
   return Object.keys(obj).reduce(function(acc, key) {
@@ -59,6 +61,43 @@ function serialize(value) {
   }
 }
 
+function getTableSchema(db, tableName, cb) {
+  db.describeTable({TableName: tableName}, function(err, data) {
+    if (err) return cb(err)
+
+    var schema = {}
+
+    data.Table.KeySchema.forEach(function(item) {
+      schema[item.KeyType.toLowerCase()] = item.AttributeName
+    })
+
+    cb(null, schema)
+  })
+}
+
+function createTableSortFunction(schema) {
+  return function(a, b) {
+    if (!a) return 1
+    if (!b) return -1
+
+    var ah = a[schema.hash]
+    var bh = b[schema.hash]
+
+    if (ah > bh) return 1
+    if (ah < bh) return -1
+
+    if (!schema.range) return 0
+
+    var ar = a[schema.range]
+    var br = b[schema.range]
+
+    if (ar > br) return 1
+    if (ar < br) return -1
+
+    return 0
+  }
+}
+
 function RequestStream(db) {
   return through.obj(function(req, enc, cb) {
     db.makeRequest(req.operation, req.params, function(err, data) {
@@ -71,7 +110,7 @@ function RequestStream(db) {
 }
 
 function ReadStream(db, operation, params) {
-  var rs = RequestStream(db)
+  var requestStream = RequestStream(db)
   var req = {
     operation: operation,
     params: shallowCopy(params || {})
@@ -84,17 +123,39 @@ function ReadStream(db, operation, params) {
 
     if (data.LastEvalutatedKey) {
       req.params.ExclusiveStartKey = data.LastEvalutatedKey
-      rs.write(req)
+      requestStream.write(req)
     }
 
-    else rs.end()
+    else requestStream.end()
 
     cb()
   })
 
-  rs.write(req)
+  var rs = requestStream.pipe(transform)
 
-  return rs.pipe(transform)
+  if (operation == "scan" && "ScanIndexForward" in req.params) {
+    var forward = req.params.ScanIndexForward
+    delete req.params.ScanIndexForward
+
+    var comparator
+    var sort = Sort(function(a, b) {
+      return (forward ? 1 : -1) * comparator(a, b)
+    })
+
+    rs = rs.pipe(sort)
+
+    getTableSchema(db, params.TableName, function(err, schema) {
+      if (err) return rs.emit("error", err)
+
+      comparator = createTableSortFunction(schema)
+
+      requestStream.write(req)
+    })
+  }
+
+  else requestStream.write(req)
+
+  return rs
 }
 
 function ScanStream(db, params) {
@@ -148,14 +209,66 @@ function PutStream(db, params) {
   return WriteStream(db, "put", params)
 }
 
+function SyncStream(db, operation, params) {
+  var sync = through.obj()
+
+  getTableSchema(db, params.TableName, function(err, schema) {
+    if (err) return sync.emit("error", err)
+
+    var fn = createTableSortFunction(schema)
+    var local = sync.pipe(Sort(fn))
+    var remote = ReadStream(db, operation, params).pipe(Sort(fn))
+
+    var diff = Diff({local: local, remote: remote}, {comparator: fn})
+    var put = PutStream(db, {TableName: params.TableName})
+    var del = DeleteStream(db, {TableName: params.TableName})
+
+    diff.pipe(through.obj(
+      function(data, enc, cb) {
+        if (data.local) put.write(data.local)
+
+        else {
+          var obj = Object.keys(schema).reduce(function(acc, attr) {
+            acc[schema[attr]] = data.remote[schema[attr]]
+            return acc
+          }, {})
+
+          del.write(obj)
+        }
+
+        cb()
+      },
+
+      function(cb) {
+        put.end()
+        del.end()
+        cb()
+      }
+    ))
+  })
+
+  return sync
+}
+
+function ScanSyncStream(db, params) {
+  return SyncStream(db, "scan", params)
+}
+
+function QuerySyncStream(db, params) {
+  return SyncStream(db, "query", params)
+}
+
 function exports(db) {
   db.createScanStream = ScanStream.bind(null, db)
   db.createQueryStream = QueryStream.bind(null, db)
   db.createDeleteStream = DeleteStream.bind(null, db)
   db.createPutStream = PutStream.bind(null, db)
-
   db.createWriteStream = WriteStream.bind(null, db)
   db.createReadStream = ReadStream.bind(null, db)
+  db.createScanSyncStream = ScanSyncStream.bind(null, db)
+  db.createQuerySyncStream = QuerySyncStream.bind(null, db)
+  db.createSyncStream = SyncStream.bind(null, db)
+  db.getTableSchema = getTableSchema.bind(null, db)
 
   return db
 }
@@ -166,5 +279,12 @@ exports.createDeleteStream = DeleteStream
 exports.createPutStream = PutStream
 exports.createWriteStream = WriteStream
 exports.createReadStream = ReadStream
+exports.createScanSyncStream = ScanSyncStream
+exports.createQuerySyncStream = QuerySyncStream
+exports.createSyncStream = SyncStream
+exports.parse = parse
+exports.serialize = serialize
+exports.getTableSchema = getTableSchema
+exports.createTableSortFunction = createTableSortFunction
 
 module.exports = exports
