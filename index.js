@@ -1,5 +1,4 @@
 var through = require("through2")
-var Sort = require("sort-stream2")
 var Diff = require("diff-stream2")
 
 function shallowCopy(obj) {
@@ -75,7 +74,7 @@ function getTableSchema(db, tableName, cb) {
   })
 }
 
-function createTableSortFunction(schema) {
+function createTableComparator(schema) {
   return function(a, b) {
     if (!a) return 1
     if (!b) return -1
@@ -100,12 +99,7 @@ function createTableSortFunction(schema) {
 
 function RequestStream(db) {
   return through.obj(function(req, enc, cb) {
-    db.makeRequest(req.operation, req.params, function(err, data) {
-      if (err) return cb(err)
-
-      this.push(data)
-      cb()
-    }.bind(this))
+    db.makeRequest(req.operation, req.params, cb)
   })
 }
 
@@ -131,31 +125,9 @@ function ReadStream(db, operation, params) {
     cb()
   })
 
-  var rs = requestStream.pipe(transform)
+  requestStream.write(req)
 
-  if (operation == "scan" && "ScanIndexForward" in req.params) {
-    var forward = req.params.ScanIndexForward
-    delete req.params.ScanIndexForward
-
-    var comparator
-    var sort = Sort(function(a, b) {
-      return (forward ? 1 : -1) * comparator(a, b)
-    })
-
-    rs = rs.pipe(sort)
-
-    getTableSchema(db, params.TableName, function(err, schema) {
-      if (err) return rs.emit("error", err)
-
-      comparator = createTableSortFunction(schema)
-
-      requestStream.write(req)
-    })
-  }
-
-  else requestStream.write(req)
-
-  return rs
+  return requestStream.pipe(transform)
 }
 
 function ScanStream(db, params) {
@@ -202,6 +174,7 @@ function WriteStream(db, operation, params) {
 }
 
 function DeleteStream(db, params) {
+  // remove all but hash/range
   return WriteStream(db, "delete", params)
 }
 
@@ -210,19 +183,19 @@ function PutStream(db, params) {
 }
 
 function SyncStream(db, operation, params) {
-  var sync = through.obj()
+  var local = through.obj()
 
   getTableSchema(db, params.TableName, function(err, schema) {
     if (err) return sync.emit("error", err)
 
-    var fn = createTableSortFunction(schema)
-    var local = sync.pipe(Sort(fn))
-    var remote = ReadStream(db, operation, params).pipe(Sort(fn))
+    var comparator = createTableComparator(schema)
+    var remote = ReadStream(db, operation, params)
 
-    var diff = Diff({local: local, remote: remote}, {comparator: fn})
+    var diff = Diff({local: local, remote: remote}, {comparator: comparator})
     var put = PutStream(db, {TableName: params.TableName})
     var del = DeleteStream(db, {TableName: params.TableName})
 
+    diff.pipe(local)
     diff.pipe(through.obj(
       function(data, enc, cb) {
         if (data.local) put.write(data.local)
@@ -247,7 +220,7 @@ function SyncStream(db, operation, params) {
     ))
   })
 
-  return sync
+  return local
 }
 
 function ScanSyncStream(db, params) {
@@ -285,6 +258,6 @@ exports.createSyncStream = SyncStream
 exports.parse = parse
 exports.serialize = serialize
 exports.getTableSchema = getTableSchema
-exports.createTableSortFunction = createTableSortFunction
+exports.createTableComparator = createTableComparator
 
 module.exports = exports

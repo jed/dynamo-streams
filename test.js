@@ -1,8 +1,9 @@
 var url = require("url")
+var assert = require("assert")
 var dynalite = require("dynalite")
 var aws = require("aws-sdk")
 var concat = require("concat-stream")
-var assert = require("assert")
+var Diff = require("diff-stream2")
 var async = require("async")
 var through = require("through2")
 var streams = require("./")
@@ -116,42 +117,54 @@ function resetTable(cb) {
 }
 
 function testPutStream(cb) {
-  var write = streams.createPutStream(db, {TableName: "stooges"})
-  var read = stream(stooges[1930])
+  streams.getTableSchema(db, "stooges", function(err, schema) {
+    if (err) return cb(err)
 
-  read.pipe(write).on("end", function() {
-    setTimeout(function() {
-      var read = streams.createScanStream(db, {TableName: "stooges", ScanIndexForward: true})
-      var write = concat(function(remote) {
-        assert.deepEqual(remote, stooges[1930])
-        cb()
-      })
+    var comparator = streams.createTableComparator(schema)
+    var write = streams.createPutStream(db, {TableName: "stooges"})
 
-      read.pipe(write)
-    }, 10)
+    stream(stooges[1930]).pipe(write).on("end", function() {
+      setTimeout(function() {
+        var remote = streams.createScanStream(db, {TableName: "stooges"})
+        var local = stream(stooges[1930])
+        var write = concat(function(diff) {
+          assert.deepEqual(diff, [])
+          cb()
+        })
+
+        Diff({local: local, remote: remote}, {comparator: comparator}).pipe(write)
+      }, 10)
+    })
   })
 }
 
 function testScanSyncStream(cb) {
-  var write = streams.createPutStream(db, {TableName: "stooges"})
-  var read = stream(stooges[1930])
+  streams.getTableSchema(db, "stooges", function(err, schema) {
+    if (err) return cb(err)
 
-  read.pipe(write).on("end", function() {
-    setTimeout(function() {
-      var write = streams.createScanSyncStream(db, {TableName: "stooges"})
-      var read = stream(stooges[1932])
+    var comparator = streams.createTableComparator(schema)
+    var write = streams.createPutStream(db, {TableName: "stooges"})
+    var read = stream(stooges[1930])
 
-      read.pipe(write).on("end", function() {
-        setTimeout(function() {
-          var read = streams.createScanStream(db, {TableName: "stooges", ScanIndexForward: true})
-          var write = concat(function(remote) {
-            assert.deepEqual(remote, stooges[1932])
-            cb()
-          })
+    read.pipe(write).on("end", function() {
+      setTimeout(function() {
+        var write = streams.createScanSyncStream(db, {TableName: "stooges"})
+        var read = stream(stooges[1932])
 
-          read.pipe(write)
-        }, 10)
-      })
-    }, 10)
+        read.pipe(write).on("end", function() {
+          setTimeout(function() {
+            var remote = streams.createScanStream(db, {TableName: "stooges"})
+            var local = stream(stooges[1932])
+
+            var write = concat(function(diff) {
+              assert.deepEqual(diff, [])
+              cb()
+            })
+
+            Diff({local: local, remote: remote}, {comparator: comparator}).pipe(write)
+          }, 100)
+        })
+      }, 10)
+    })
   })
 }

@@ -13,7 +13,6 @@
   ],
   "dependencies": {
     "diff-stream2": "^1.0.2",
-    "sort-stream2": "^1.0.0",
     "through2": "^0.6.3"
   },
   "devDependencies": {
