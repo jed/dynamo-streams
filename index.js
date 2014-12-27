@@ -194,30 +194,30 @@ function SyncStream(db, operation, params) {
     var diff = Diff({local: local, remote: remote}, {comparator: comparator})
     var put = PutStream(db, {TableName: params.TableName})
     var del = DeleteStream(db, {TableName: params.TableName})
+    var dispatch = through.obj(transform, flush)
 
-    diff.pipe(local)
-    diff.pipe(through.obj(
-      function(data, enc, cb) {
-        if (data.local) put.write(data.local)
+    diff.pipe(dispatch)
 
-        else {
-          var obj = Object.keys(schema).reduce(function(acc, attr) {
-            acc[schema[attr]] = data.remote[schema[attr]]
-            return acc
-          }, {})
+    function transform(data, enc, cb) {
+      if (data.local) put.write(data.local)
 
-          del.write(obj)
-        }
+      else {
+        var obj = Object.keys(schema).reduce(function(acc, attr) {
+          acc[schema[attr]] = data.remote[schema[attr]]
+          return acc
+        }, {})
 
-        cb()
-      },
-
-      function(cb) {
-        put.end()
-        del.end()
-        cb()
+        del.write(obj)
       }
-    ))
+
+      cb(null, data)
+    }
+
+    function flush(cb) {
+      put.end()
+      del.end()
+      cb()
+    }
   })
 
   return local
