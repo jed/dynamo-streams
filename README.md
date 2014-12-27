@@ -44,7 +44,7 @@ var read = dbStreams.createScanStream({TableName: "stooges"})
 
 #### dbStreams#createScanStream(params)
 
-Returns a readable stream of scanned rows. `params` is passed through to the underlying `db.scan` operation, with one extension: if `ScanIndexForward` property is specified, the resulting stream is sorted according the the table schema. Keep in mind that sort requires the entire stream to be buffered.
+Returns a readable stream of scanned rows. `params` is passed through to the underlying `db.scan` operation.
 
 ```javascript
 var read = dbStreams.createScanStream({TableName: "stooges"})
