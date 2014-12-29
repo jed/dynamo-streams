@@ -147,7 +147,8 @@ function WriteStream(db, operation, params) {
   return batch
 
   function transform(data, enc, cb) {
-    ops.push(data) >= 25 ? flush.call(this, cb) : cb()
+    ops.push(data)
+    ops.length < 25 ? cb() : flush.call(this, cb)
   }
 
   function flush(cb) {
@@ -199,7 +200,9 @@ function SyncStream(db, operation, params) {
     diff.pipe(dispatch)
 
     function transform(data, enc, cb) {
-      if (data.local) put.write(data.local)
+      if (data.local) {
+        put.write(data.local)
+      }
 
       else {
         var obj = Object.keys(schema).reduce(function(acc, attr) {
@@ -210,7 +213,7 @@ function SyncStream(db, operation, params) {
         del.write(obj)
       }
 
-      cb(null, data)
+      cb()
     }
 
     function flush(cb) {
