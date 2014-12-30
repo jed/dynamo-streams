@@ -35,7 +35,7 @@ function parse(value) {
 }
 
 function serialize(value) {
-  if (value === "") throw new Error("Cannot serialize empty string.")
+  if (value === "") value = {NULL: true}
 
   var type = toString.call(value).slice(8, -1)
 
