@@ -115,8 +115,8 @@ function ReadStream(db, operation, params) {
       this.push(parse({M: item}))
     }, this)
 
-    if (data.LastEvalutatedKey) {
-      req.params.ExclusiveStartKey = data.LastEvalutatedKey
+    if (data.LastEvaluatedKey) {
+      req.params.ExclusiveStartKey = data.LastEvaluatedKey
       requestStream.write(req)
     }
 
