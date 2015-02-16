@@ -97,14 +97,10 @@ function createTableComparator(schema) {
   }
 }
 
-function RequestStream(db) {
-  return through.obj(function(req, enc, cb) {
+function ReadStream(db, operation, params) {
+  var requestStream = through.obj(function(req, enc, cb) {
     db.makeRequest(req.operation, req.params, cb)
   })
-}
-
-function ReadStream(db, operation, params) {
-  var requestStream = RequestStream(db)
   var req = {
     operation: operation,
     params: shallowCopy(params || {})
@@ -117,12 +113,10 @@ function ReadStream(db, operation, params) {
 
     if (data.LastEvaluatedKey) {
       req.params.ExclusiveStartKey = data.LastEvaluatedKey
-      requestStream.write(req)
+      requestStream.write(req, cb)
     }
 
-    else requestStream.end()
-
-    cb()
+    else requestStream.end(cb)
   })
 
   requestStream.write(req)
@@ -139,16 +133,14 @@ function QueryStream(db, params) {
 }
 
 function WriteStream(db, operation, params) {
-  var rs = RequestStream(db)
-  var batch = through.obj(transform, flush)
+  var batch = through.obj({highWaterMark: 25}, transform, flush)
   var ops = []
-  batch.pipe(rs)
 
   return batch
 
   function transform(data, enc, cb) {
     ops.push(data)
-    ops.length < 25 ? cb() : flush.call(this, cb)
+    ops.length < 25 ? cb() : flush(cb)
   }
 
   function flush(cb) {
@@ -169,8 +161,11 @@ function WriteStream(db, operation, params) {
     }
 
     req.params.RequestItems[params.TableName] = items
-    this.push(req)
-    cb()
+
+    db.makeRequest(req.operation, req.params, function(err, data) {
+      // TODO: Check data.UnprocessedItems here
+      cb(err)
+    })
   }
 }
 
@@ -187,7 +182,7 @@ function SyncStream(db, operation, params) {
   var local = through.obj()
 
   getTableSchema(db, params.TableName, function(err, schema) {
-    if (err) return sync.emit("error", err)
+    if (err) return local.emit("error", err)
 
     var comparator = createTableComparator(schema)
     var remote = ReadStream(db, operation, params)
@@ -201,7 +196,7 @@ function SyncStream(db, operation, params) {
 
     function transform(data, enc, cb) {
       if (data.local) {
-        put.write(data.local)
+        put.write(data.local, cb)
       }
 
       else {
@@ -210,16 +205,15 @@ function SyncStream(db, operation, params) {
           return acc
         }, {})
 
-        del.write(obj)
+        del.write(obj, cb)
       }
-
-      cb()
     }
 
     function flush(cb) {
-      put.end()
-      del.end()
-      cb()
+      put.end(function(err) {
+        if (err) return cb(err)
+        del.end(cb)
+      })
     }
   })
 
