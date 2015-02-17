@@ -25,6 +25,11 @@ var stooges = {
   ]
 }
 
+for (var i = 5; i < 1000; i++) {
+  stooges[1930].push({id: i, name: "Iggy"})
+  stooges[1932].push({id: i, name: "Iggy"})
+}
+
 async.series([
   openDatabase,
   createTable,
@@ -124,17 +129,15 @@ function testPutStream(cb) {
     var write = streams.createPutStream(db, {TableName: "stooges"})
 
     stream(stooges[1930]).pipe(write).on("end", function() {
-      setTimeout(function() {
-        var remote = streams.createScanStream(db, {TableName: "stooges"})
-        var local = stream(stooges[1930])
-        var write = concat(function(diff) {
-          assert.deepEqual(diff, [])
-          cb()
-        })
+      var remote = streams.createScanStream(db, {TableName: "stooges"})
+      var local = stream(stooges[1930])
+      var write = concat(function(diff) {
+        assert.deepEqual(diff, [])
+        cb()
+      })
 
-        Diff({local: local, remote: remote}, {comparator: comparator}).pipe(write)
-      }, 10)
-    })
+      Diff({local: local, remote: remote}, {comparator: comparator}).pipe(write)
+    }).resume()
   })
 }
 
@@ -147,24 +150,22 @@ function testScanSyncStream(cb) {
     var read = stream(stooges[1930])
 
     read.pipe(write).on("end", function() {
-      setTimeout(function() {
-        var write = streams.createScanSyncStream(db, {TableName: "stooges"})
-        var read = stream(stooges[1932])
+      var write = streams.createScanSyncStream(db, {TableName: "stooges"})
+      var read = stream(stooges[1932])
 
-        read.pipe(write).on("end", function() {
-          setTimeout(function() {
-            var remote = streams.createScanStream(db, {TableName: "stooges"})
-            var local = stream(stooges[1932])
+      read.pipe(write).on("end", function() {
+        setTimeout(function() {
+          var remote = streams.createScanStream(db, {TableName: "stooges"})
+          var local = stream(stooges[1932])
 
-            var write = concat(function(diff) {
-              assert.deepEqual(diff, [])
-              cb()
-            })
+          var write = concat(function(diff) {
+            assert.deepEqual(diff, [])
+            cb()
+          })
 
-            Diff({local: local, remote: remote}, {comparator: comparator}).pipe(write)
-          }, 100)
-        })
-      }, 10)
-    })
+          Diff({local: local, remote: remote}, {comparator: comparator}).pipe(write)
+        }, 1000)
+      })
+    }).resume()
   })
 }
