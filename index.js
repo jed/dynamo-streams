@@ -162,10 +162,27 @@ function WriteStream(db, operation, params) {
 
     req.params.RequestItems[params.TableName] = items
 
-    db.makeRequest(req.operation, req.params, function(err, data) {
-      // TODO: Check data.UnprocessedItems here
-      cb(err)
-    })
+    var retries = 0;
+    var maxRetries = 12;
+
+    makeRequest(req.operation, req.params, cb);
+
+    function makeRequest (operation, params, done) {
+      db.makeRequest(operation, params, function(err, data) {
+
+        if (err) return done(err);
+        if (Object.keys(data.UnprocessedItems).length == 0) return done();
+
+        params.RequestItems = data.UnprocessedItems;
+        // Exponential backoff
+        var delay = Math.pow(retries++, 2) * 50;
+        if (retries > maxRetries) return done(new Error("Maximum retries exceeded"), data);
+
+        // console.log("Retrying UnprocessedItems with delay %d", delay);
+        setTimeout(makeRequest, delay, operation, params, done);
+
+      });
+    }
   }
 }
 
