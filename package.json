@@ -23,5 +23,13 @@
   },
   "scripts": {
     "test": "node test.js"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jed/dynamo-streams.git"
+  },
+  "bugs": {
+    "url": "https://github.com/jed/dynamo-streams/issues"
+  },
+  "homepage": "https://github.com/jed/dynamo-streams#readme"
 }
