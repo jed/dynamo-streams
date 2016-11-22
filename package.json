@@ -1,6 +1,6 @@
 {
   "name": "dynamo-streams",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "description": "A stream-flavored wrapper for the AWS DynamoDB JavaScript API",
   "main": "index.js",
   "author": "Jed Schmidt <where@jed.is>",
