@@ -163,7 +163,7 @@ function WriteStream(db, operation, params) {
     req.params.RequestItems[params.TableName] = items
 
     var retries = 0;
-    var maxRetries = 12;
+    var maxRetries = db.config.maxRetries || 12;
 
     makeRequest(req.operation, req.params, cb);
 
