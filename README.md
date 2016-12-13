@@ -72,7 +72,7 @@ var put = dbStreams.createPutStream({TableName: "stooges"})
 put.write({id: 4, name: "Curly"})
 put.end()
 
-put.on("end", function() {
+put.on("finish", function() {
   var read = dbStreams.createScanStream({TableName: "stooges"})
 
   read.on("data", console.log)
@@ -94,7 +94,7 @@ var put = dbStreams.createDeleteStream({TableName: "stooges"})
 put.write({id: 2})
 put.end()
 
-put.on("end", function() {
+put.on("finish", function() {
   var read = dbStreams.createScanStream({TableName: "stooges"})
 
   read.on("data", console.log)
@@ -117,7 +117,7 @@ sync.write({id: 4, name: "Curly"})
 
 sync.end()
 
-put.on("end", function() {
+put.on("finish", function() {
   var read = dbStreams.createScanStream({TableName: "stooges"})
 
   read.on("data", console.log)
